@@ -1,6 +1,9 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import styled from '@emotion/styled';
+import Error from './Error';
 import useMoneda from '../hooks/useMoneda';
+import useCriptomoneda from '../hooks/useCriptomoneda';
+import axios from 'axios';
 
 const Boton = styled.input`
     margin-top: 20px;
@@ -19,15 +22,57 @@ const Boton = styled.input`
     }
 `;
 
-const Formulario = () => {
+const Formulario = ({guardarMoneda, guardarCriptomoneda}) => {
+
+    //State de listado de criptomonedas
+    const [listacripto, guardarCriptomonedas] = useState([]);
+    const [ error, guardarError ] = useState(false);
+
+    const MONEDA = [
+        {codigo: 'USD', nombre: 'Dolar Americano'},
+        {codigo: 'MXN', nombre: 'Peso Mexicano'},
+        {codigo: 'EUR', nombre: 'Euro'},
+        {codigo: 'GBP', nombre: 'Libra Esterlina'}
+    ]
 
     //Utilizar useMoneda
-    const [moneda, SelectMoneda, actualizarState] = useMoneda();
+    const [moneda, SelectMoneda] = useMoneda('Elige tu moneda', '', MONEDA);
+
+    const [criptomoneda, SelectCripto] = useCriptomoneda('Elige tu criptomoneda', '', listacripto);
+
+    useEffect(() => {
+        const consultarAPI = async () => {
+            const url = 'https://min-api.cryptocompare.com/data/top/mktcapfull?limit=10&tsym=USD';
+            const resultado = await axios.get(url);
+            guardarCriptomonedas(resultado.data.Data);
+        }
+        consultarAPI();
+    }, [])
+
+    const cotizarMoneda = (e) => {
+        e.preventDefault();
+
+        //Validar si ambos campos estan llenos
+        if(moneda === '' || criptomoneda === '') {
+            guardarError(true);
+            return;
+        }
+
+        //Pasar los datos al componente principal
+        guardarError(false);
+        guardarMoneda(moneda);
+        guardarCriptomoneda(criptomoneda);
+    }
 
     return ( 
-        <form>
-            
+        <form
+            onSubmit={cotizarMoneda}
+        >
+            {error ? <Error mensaje="Todos los campos son obligatorios" /> : null}
+
             <SelectMoneda />
+
+            <SelectCripto />
 
             <Boton
                 type="submit"
